@@ -31,7 +31,7 @@ Configure Tomcat by adding the following block to context.xml (or context block 
             password - Redis auth password
             connectionAttempts - Number of attempts to connect to redis (defaults to 20).
             connectionAttemptDelay - Delay between attempts (in milliseconds, defaults to 500). NB: Make sure that total duration of connectionAttempts*attemptDelay is enough for new master to be chosen. 
-	    operationAttempts - Number of attempts to retry redis operation if it fails.  (defaults to 3)
+            operationAttempts - Number of attempts to retry redis operation if it fails.  (defaults to 3)
             maxInactiveInterval - The default maximum inactive interval for Sessions. Is overridden by web.xml session-timeout setting (in seconds defaults to 1800) 
             sessionIdLength - The session id length of Sessions. (defaults to 16)
         Jedis pool config attributes (optional):
