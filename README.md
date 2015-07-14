@@ -1,13 +1,22 @@
 # tomcat-redis-session-manager
 Non-sticky session manager for Apache Tomcat with Redis and disk store implementations.
 
-1. Compile using maven: 
+Build
+---
+
+Compile using maven
 
 	mvn compile package
 
-2. Copy tomcat-redis-session-manager-{version}.jar to TOMCAT_BASE/lib directory.
+Install
+---
 
-3. For Redis store configure Tomcat by adding the following block to context.xml (or context block of server.xml)
+Copy tomcat-redis-session-manager-{version}.jar to TOMCAT_BASE/lib directory.
+
+Redis store
+---
+
+Configure Tomcat by adding the following block to context.xml (or context block of server.xml)
 
 	<!-- RedisSessionManager 
 	Single host config attributes:
@@ -28,14 +37,18 @@ Non-sticky session manager for Apache Tomcat with Redis and disk store implement
         Jedis pool config attributes (optional):
             poolXXX - where XXX are properties from GenericObjectPoolConfig see (https://commons.apache.org/proper/commons-pool/apidocs/org/apache/commons/pool2/impl/GenericObjectPoolConfig.html)
 	-->
-	<Manager className="ee.neotech.tomcat.session.RedisSessionManager"
-		 host="?"
-		 port="?"
-	         sentinelMaster="?"
-        	 sentinels="?"
-	         password="?"/>
+	
+	<Manager className="ee.neotech.tomcat.session.RedisSessionManager"  
+		host="?"  
+		port="?"  
+		sentinelMaster="?"  
+		sentinels="?"  
+		password="?"/>  
+	         
+Disk store (experimental)
+---
 
-4. For Disk store (experimental) configure Tomcat by adding the following block to context.xml (or context block of server.xml)
+Configure Tomcat by adding the following block to context.xml (or context block of server.xml)
 
 	<!-- DiskSessionManager 
 		path - disk path to use as session storage -->
