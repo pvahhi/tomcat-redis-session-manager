@@ -1,5 +1,5 @@
 # tomcat-redis-session-manager
-Non-sticky session manager for Apache Tomcat with Redis and disk store implementations.
+Non-sticky session manager for Apache Tomcat 7.xx with Redis and disk store implementations.
 
 Build
 ---
