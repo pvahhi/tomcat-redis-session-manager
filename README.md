@@ -34,6 +34,9 @@ Configure Tomcat by adding the following block to context.xml (or context block 
             operationAttempts - Number of attempts to retry redis operation if it fails.  (defaults to 3)
             maxInactiveInterval - The default maximum inactive interval for Sessions. Is overridden by web.xml session-timeout setting (in seconds defaults to 1800) 
             sessionIdLength - The session id length of Sessions. (defaults to 16)
+            keepSessionDuration - Cached sessions will be reused for specified duration after being cached. Will greatly speed up concurrent requests to the same session, but at a price of possible desync if used in cluster environment with dynamic load balancing (defaults to 10)
+            cacheClearupDelay - Delay between executions of session cache clearup task, in seconds. (defaults to 60)
+            expirationUpdateDelay - Delay between updates of session expiration/TTL (defaults to 10)
         Jedis pool config attributes (optional):
             poolXXX - where XXX are properties from GenericObjectPoolConfig see (https://commons.apache.org/proper/commons-pool/apidocs/org/apache/commons/pool2/impl/GenericObjectPoolConfig.html)
 	-->

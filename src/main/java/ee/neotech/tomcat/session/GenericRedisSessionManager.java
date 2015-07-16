@@ -319,7 +319,7 @@ public abstract class GenericRedisSessionManager extends NonStickySessionManager
     protected synchronized void startInternal() throws LifecycleException {
         long start = System.currentTimeMillis();
         
-        log.info("Initializing Redis session manager");
+        log.info("Initializing Redis session manager with session cache duration "+ this.keepSessionDuration + " seconds.");
         
         super.startInternal();
 

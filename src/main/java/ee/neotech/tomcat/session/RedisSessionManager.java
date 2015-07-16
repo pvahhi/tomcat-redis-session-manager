@@ -99,34 +99,49 @@ public class RedisSessionManager extends GenericRedisSessionManager {
             return null;
         }
 
+        if (log.isTraceEnabled()) {
+            log.trace("Session sid="+id+" data size=" + (result == null ? "null" : result.length) +" loaded from redis");
+        }
         return result;
     }
 
     @Override
-    protected void save(final String id, final byte[] data, final NonStickySession session) throws Exception {
-        withJedis(new JedisOp<Void>() {
+    protected void save(final String id, final byte[] data, final int expireSeconds) throws Exception {
+        withJedis(new JedisOp<String>() {
             @Override
-            public Void execute(Jedis jedis) {
-                byte[] binaryId = id.getBytes();
-
-                jedis.set(binaryId, data);
-                // log.info("Setting session id="+id+" TTL= "+ session.getMaxInactiveInterval());
-                jedis.expire(binaryId, session.getMaxInactiveInterval());
-
-                return null;
+            public String execute(Jedis jedis) {
+                return jedis.setex(id.getBytes(), expireSeconds, data);
             }
         });
+        if (log.isTraceEnabled()) {
+            log.trace("Session sid="+id+" data size = " + data.length +" saved to Redis with TTL="+expireSeconds);
+        }
+    }
+    
+    @Override
+    protected void expire(final String id, final int expireSeconds) throws Exception {
+        withJedis(new JedisOp<Long>() {
+            @Override
+            public Long execute(Jedis jedis) {
+                return jedis.expire(id.getBytes(), expireSeconds);
+            }
+        });
+        if (log.isTraceEnabled()) {
+            log.trace("Session sid="+id+" set Redis TTL="+expireSeconds);
+        }
     }
 
     @Override
     protected void delete(final String id) throws Exception {
-        withJedis(new JedisOp<Void>() {
+        withJedis(new JedisOp<Long>() {
             @Override
-            public Void execute(Jedis jedis) {
-                jedis.del(id.getBytes());
-                return null;
+            public Long execute(Jedis jedis) {
+                return jedis.del(id.getBytes());
             }
         });
+        if (log.isTraceEnabled()) {
+            log.trace("Session sid="+id+" deleted from Redis");
+        }
     }
 
     @Override
@@ -157,4 +172,5 @@ public class RedisSessionManager extends GenericRedisSessionManager {
         }
         return sb.toString();
     }
+
 }

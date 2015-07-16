@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
-import java.util.Objects;
 
 import org.apache.catalina.Lifecycle;
 import org.apache.catalina.LifecycleException;
@@ -19,6 +18,9 @@ import org.apache.catalina.util.LifecycleSupport;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
+import ee.neotech.tomcat.session.ExpirableCache.Expirable;
+import ee.neotech.tomcat.session.ExpirableCache.ValueProvider;
+
 public abstract class NonStickySessionManager extends ManagerBase implements Lifecycle {
 
     private final Log log = LogFactory.getLog(NonStickySessionManager.class);
@@ -29,16 +31,35 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
     protected LifecycleSupport lifecycle = new LifecycleSupport(this);
     private ClassLoader loader;
 
-    private final ThreadLocal<SessionContext> context = new ThreadLocal<NonStickySessionManager.SessionContext>();
+    static class CachedSession extends Expirable {
+        private byte[] binary;
+        private NonStickySession session;
+        private long expirationUpdated;
+        
+        public CachedSession() {}
 
-    private static class SessionContext {
-        byte[] binary;
-        NonStickySession session;
-
-        public SessionContext(byte[] binary, NonStickySession session) {
+        public CachedSession(byte[] binary, NonStickySession session) {
             this.binary = binary;
             this.session = session;
         }
+    }
+
+    private ExpirableCache<CachedSession> sessionCache;
+
+    protected int keepSessionDuration = 10; // in seconds
+    protected int cacheClearupDelay = 60; // in seconds
+    protected int expirationUpdateDelay = 10; // in seconds
+
+    public final void setKeepSessionDuration(int keepSessionDuration) {
+        this.keepSessionDuration = keepSessionDuration;
+    }
+
+    public final void setExpirationUpdateDelay(int expirationUpdateDelay) {
+        this.expirationUpdateDelay = expirationUpdateDelay;
+    }
+
+    public final void setCacheClearupDelay(int cacheClearupDelay) {
+        this.cacheClearupDelay = cacheClearupDelay;
     }
 
     @Override
@@ -101,6 +122,7 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
 
         setDistributable(true);
         loader = getContainer() != null ? getContainer().getLoader().getClassLoader() : null;
+        sessionCache = new ExpirableCache<NonStickySessionManager.CachedSession>(1000 * keepSessionDuration, 1000 * cacheClearupDelay, log);
 
         setState(LifecycleState.STARTING);
     }
@@ -116,6 +138,8 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
     protected synchronized void stopInternal() throws LifecycleException {
         if (log.isDebugEnabled()) log.debug("Stopping");
 
+        this.sessionCache.destroy();
+        
         setState(LifecycleState.STOPPING);
 
         super.stopInternal();
@@ -123,7 +147,6 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
 
     @Override
     public Session createSession(String requestedSessionId) {
-        //log.info("New session requested (id="+requestedSessionId+" - discarded)");
         // do not reuse provided id -> always generate new for non existing sessions.
         return super.createSession(null);
     }
@@ -136,35 +159,49 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
     @Override
     public final void add(Session session) {
         try {
-            NonStickySession nss = (NonStickySession) session;
-                                               
-            if (nss.isDirty()) {
-                byte[] binary = toBinary(nss);
-                SessionContext sessionContext = context.get();
-                boolean modified = nss.isModified() || sessionContext == null || !Arrays.equals(sessionContext.binary, binary);
+            String id = session.getId();
 
-                context.set(new SessionContext(binary, nss));
-                
-                if (modified) {
+            CachedSession cachedSession = sessionCache.get(id,
+                    new ValueProvider<NonStickySessionManager.CachedSession>() {
+                        @Override
+                        public CachedSession get(String key) {
+                            return new CachedSession();
+                        }
+                    });
 
-                    //log.info("Saving session id=" + session.getId() + " thread=" + Thread.currentThread().getName() + " modified = "
-                    //        + nss.isModified() + " size = " + binary.length);
-                    save(session.getId(), binary, nss);
+            synchronized (cachedSession) {
+                NonStickySession nss = (NonStickySession) session;
+                long at = System.currentTimeMillis();
+
+                if (nss.isDirty()) {
+                    byte[] binary = toBinary(nss);
+
+                    boolean modified = nss.isModified() || !Arrays.equals(cachedSession.binary, binary);
+
+                    cachedSession.binary = binary;
+                    cachedSession.session = nss;
+
+                    if (modified) {
+                        save(id, binary, nss.getMaxInactiveInterval());
+                        cachedSession.expirationUpdated = at;
+                    }
+
+                    nss.resetStates();
                 }
                 
-                nss.resetStates();
-            } else {
-                context.set(new SessionContext(null, nss));
+                if (at - cachedSession.expirationUpdated > expirationUpdateDelay * 1000) {
+                    expire(id, nss.getMaxInactiveInterval());
+                    cachedSession.expirationUpdated = at;
+                }
             }
-                        
+
         } catch (Exception ex) {
             throw new IllegalStateException("Failed to persist session (id=" + session.getId() + ")", ex);
         }
     }
-    
+
     protected void endAccess(NonStickySession sess) {
         try {
-            //log.trace("Ending access for session id=" + sess.getId());
             if (sess.isValid()) {
                 add(sess);
             } else {
@@ -173,62 +210,55 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
         } catch (Exception e) {
             log.error("Failed to end session access", e);
         }
-        
-        context.set(null);
     }
 
     @Override
     public final Session findSession(String id) throws IOException {
-        SessionContext sc = context.get();
-        if (sc != null) {
-            if (Objects.equals(sc.session.getId(), id)) {
-                return context.get().session;
-            }
-        }
+        if (id == null) return null;
 
-        //log.trace("Finding session by id=" + id + " thread=" + Thread.currentThread().getName());
+        CachedSession cachedSession = sessionCache.get(id, new ValueProvider<NonStickySessionManager.CachedSession>() {
+            @Override
+            public CachedSession get(String key) {
 
-        if (id == null) return (null);
-
-        byte[] data;
-        try {
-            data = load(id);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to load session (id=" + id + ")", ex);
-        }
-
-        if (data != null) {
-            try {
-                NonStickySession result = fromBinary(data);
-
-                context.set(new SessionContext(data, result));
-
-                return result;
-            } catch (Throwable e) {
-                log.warn("Failed to deserialize session id=" + id + ". Session data will be reset", e);
+                byte[] data;
                 try {
-                    delete(id);
+                    data = load(key);
                 } catch (Exception ex) {
-                    log.error("Failed to delete session (id=" + id + ")", ex);
+                    throw new IllegalStateException("Failed to load session (id=" + key + ")", ex);
                 }
+
+                if (data != null) {
+                    try {
+                        return new CachedSession(data, fromBinary(data));
+                    } catch (Throwable e) {
+                        log.warn("Failed to deserialize session id=" + key + ". Session data will be reset", e);
+                        try {
+                            delete(key);
+                        } catch (Exception ex) {
+                            log.error("Failed to delete session (id=" + key + ")", ex);
+                        }
+                    }
+                }
+
                 return null;
             }
-        }
-        
-        return null;
+        });
+
+        return cachedSession != null ? cachedSession.session : null;
     }
 
     @Override
     public void remove(Session session, boolean update) {
+        String id = session.getId();
         try {
-            //log.info("Removing session id=" + session.getId() + " thread=" + Thread.currentThread().getName());
             super.remove(session, update);
 
-            delete(session.getId());
+            delete(id);
+            
         } catch (Exception ex) {
             log.error("Failed to delete session (id=" + session.getId() + ")", ex);
         } finally {
-            context.set(null);
+            sessionCache.remove(id);
         }
     }
 
@@ -251,7 +281,9 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
 
     protected abstract byte[] load(String id) throws Exception;
 
-    protected abstract void save(String id, byte[] data, NonStickySession session) throws Exception;
+    protected abstract void save(String id, byte[] data, int expireSeconds) throws Exception;
+
+    protected abstract void expire(String id, int expireSeconds) throws Exception;
 
     protected abstract void delete(String id) throws Exception;
 }

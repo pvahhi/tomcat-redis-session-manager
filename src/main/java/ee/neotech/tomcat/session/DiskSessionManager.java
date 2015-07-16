@@ -48,16 +48,20 @@ public class DiskSessionManager extends NonStickySessionManager {
     }
 
     @Override
-    protected void save(String id, byte[] data, NonStickySession sess) throws Exception {
+    protected void save(String id, byte[] data, int expireSeconds) throws Exception {
         synchronized (getSessLock(id)) {
             File file = new File(path, id);
-
+            
             try (FileOutputStream fos = new FileOutputStream(file, false)) {
                 fos.write(data);
                 fos.flush();
             }
         }
-
+    }
+    
+    @Override
+    protected void expire(String id, int expireSeconds) throws Exception {
+        // not implemented
     }
 
     @Override

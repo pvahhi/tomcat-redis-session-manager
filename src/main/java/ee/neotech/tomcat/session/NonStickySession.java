@@ -1,8 +1,5 @@
 package ee.neotech.tomcat.session;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.Objects;
 
 import org.apache.catalina.session.StandardSession;
@@ -46,7 +43,6 @@ public class NonStickySession extends StandardSession {
         this.dirty = true;
         
         if (!Objects.equals(value, oldValue)) {
-            //log.info("SET attr "+key+" = " + value);
             this.modified = true;
         }
     }
@@ -61,7 +57,6 @@ public class NonStickySession extends StandardSession {
     public void removeAttribute(String name) {
         if (this.getAttribute(name) != null) {
             super.removeAttribute(name);
-            //log.info("REMOVE attr "+name);
             this.dirty = true;
             this.modified = true;
         }
@@ -81,31 +76,50 @@ public class NonStickySession extends StandardSession {
     }
 
     @Override
+    public void setCreationTime(long time) {
+        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by this fields)
+        this.creationTime = time;
+    }
+    
+    @Override
+    public void access() {
+        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by this fields)
+        
+        if (ACTIVITY_CHECK) {
+            accessCount.incrementAndGet();
+        }
+    }
+    
+    @Override
     public void endAccess() {
-        super.endAccess();
+        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by this fields)
+        
+        isNew = false;
+
+        if (ACTIVITY_CHECK) {
+            accessCount.decrementAndGet();
+        }
 
         getManager().endAccess(this);
     }
     
     @Override
-    protected void writeObject(ObjectOutputStream stream) throws IOException {
-        long lat = lastAccessedTime;
-        long tat = thisAccessedTime;
-        try {
-            // do not serialize lat and tat so binary session data will change only when there are real changes
-            lastAccessedTime = thisAccessedTime = 0; 
-            super.writeObject(stream);
-        } finally {
-            lastAccessedTime = lat;
-            thisAccessedTime = tat;
+    public boolean isValid() {
+        if (!this.isValid) {
+            return false;
         }
-    }
-    
-    @Override
-    protected void readObject(ObjectInputStream stream) throws ClassNotFoundException, IOException {
-        super.readObject(stream);
+
+        if (this.expiring) {
+            return true;
+        }
+
+        if (ACTIVITY_CHECK && accessCount.get() > 0) {
+            return true;
+        }       
         
-        lastAccessedTime = thisAccessedTime = System.currentTimeMillis();
+        // do not call expire. expiration is done with external mechanism
+
+        return this.isValid;
     }
 
     public void resetStates() {
