@@ -196,7 +196,7 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
             }
 
         } catch (Exception ex) {
-            throw new IllegalStateException("Failed to persist session (id=" + session.getId() + ")", ex);
+            log.fatal("Failed to persist session (id=" + session.getId() + ")", ex);
         }
     }
 
@@ -220,11 +220,11 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
             @Override
             public CachedSession get(String key) {
 
-                byte[] data;
+                byte[] data = null;
                 try {
                     data = load(key);
                 } catch (Exception ex) {
-                    throw new IllegalStateException("Failed to load session (id=" + key + ")", ex);
+                    log.fatal("Failed to load session (id=" + key + ")", ex);
                 }
 
                 if (data != null) {
