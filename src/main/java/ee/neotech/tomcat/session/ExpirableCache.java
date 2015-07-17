@@ -5,8 +5,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.juli.logging.Log;
-
 public class ExpirableCache<T extends ExpirableCache.Expirable> {
 
     public static class Expirable {
@@ -32,7 +30,6 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
         public void run() {
             while (!Thread.currentThread().isInterrupted()) {
                 long at = System.currentTimeMillis();
-                long count = items.size();
                 
                 for (Iterator<Entry<String, T>> i = items.entrySet().iterator(); i.hasNext(); ) {
                     Entry<String, T> cs = i.next();
@@ -42,13 +39,7 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
                         i.remove();
                         locks.remove(key);
                     }
-                }
-                
-                long count2 = items.size();
-                
-                if (opLogger != null) {
-                    opLogger.info("Session cache clearup completed. Before="+count+", after="+count2);
-                }
+                }               
                 
                 try {
                     Thread.sleep(evictionTimeout);
@@ -59,12 +50,9 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
             
         }}, "SessionCache-eviction-thread");
     
-    private final Log opLogger;
-    
-    public ExpirableCache(long duration, long evictionTimeout, Log opLogger) {
+    public ExpirableCache(long duration, long evictionTimeout) {
         this.duration = duration;
         this.evictionTimeout = evictionTimeout;
-        this.opLogger = opLogger;
         this.evictionThread.start();
     }
 

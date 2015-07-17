@@ -122,7 +122,7 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
 
         setDistributable(true);
         loader = getContainer() != null ? getContainer().getLoader().getClassLoader() : null;
-        sessionCache = new ExpirableCache<NonStickySessionManager.CachedSession>(1000 * keepSessionDuration, 1000 * cacheClearupDelay, log);
+        sessionCache = new ExpirableCache<NonStickySessionManager.CachedSession>(1000 * keepSessionDuration, 1000 * cacheClearupDelay);
 
         setState(LifecycleState.STARTING);
     }
