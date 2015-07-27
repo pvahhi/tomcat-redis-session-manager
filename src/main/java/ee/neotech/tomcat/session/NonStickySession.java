@@ -10,10 +10,10 @@ public class NonStickySession extends StandardSession {
     //private final Log log = LogFactory.getLog(NonStickySession.class);
     
     /** true if session data was exposed and could be modified */
-    private boolean dirty;
+    private volatile boolean dirty;
     
     /** true if session data is modified */
-    private boolean modified;
+    private volatile boolean modified;
 
     public NonStickySession(NonStickySessionManager manager) {
         super(manager);

@@ -320,7 +320,7 @@ public abstract class GenericRedisSessionManager extends NonStickySessionManager
         long start = System.currentTimeMillis();
         
         log.info("Initializing Redis session manager with session cache duration "+ this.keepSessionDuration + " seconds.");
-        
+        log.info("Redis connection pool config: maxTotal="+jedisPoolConfig.getMaxTotal()+", maxIdle="+jedisPoolConfig.getMaxIdle()+", minIdle="+jedisPoolConfig.getMinIdle());        
         super.startInternal();
 
         try {
@@ -339,7 +339,7 @@ public abstract class GenericRedisSessionManager extends NonStickySessionManager
             log.info("Redis session manager failed to initialize");
             throw new LifecycleException("Error connecting to Redis", e);
         }
-        
+
         log.info("Redis session manager initialized in "+(System.currentTimeMillis()-start)+"ms.");
     }
 

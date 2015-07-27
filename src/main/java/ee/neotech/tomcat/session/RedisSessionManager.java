@@ -25,7 +25,7 @@ public class RedisSessionManager extends GenericRedisSessionManager {
     private <T> T withJedis(JedisOp<T> operation) {
 
         Throwable unrecoverable = null;
-        
+
         for (int operationAttempt = 0; operationAttempt < operationAttempts; operationAttempt++) {
 
             Jedis jedis = null;
@@ -35,18 +35,18 @@ public class RedisSessionManager extends GenericRedisSessionManager {
                     break;
                 } catch (JedisConnectionException e) {
                     log.warn("Could not get Redis connection from the pool (attempt: " + (connectionAttempt + 1) + ", retry in "
-                            + connectionAttemptDelay + "ms): " + getMessageWithCauses(e));                    
+                            + connectionAttemptDelay + "ms): " + getMessageWithCauses(e));
                 }
-                
+
                 try {
                     Thread.sleep(connectionAttemptDelay);
                 } catch (InterruptedException e) {
                     throw new IllegalStateException("Thread interrupted", e);
                 }
             }
-            
+
             if (jedis == null) {
-                throw new IllegalStateException("Failed to get Redis connection after "+connectionAttempts+" attempts");
+                throw new IllegalStateException("Failed to get Redis connection after " + connectionAttempts + " attempts");
             }
 
             if (database != 0) {
@@ -55,22 +55,20 @@ public class RedisSessionManager extends GenericRedisSessionManager {
 
             try {
                 T result = operation.execute(jedis);
-
                 jedisPool.returnResource(jedis);
-
                 return result;
-            } catch (JedisConnectionException e) { 
-                log.warn("Failed to perform Redis operation - attempt #"+(operationAttempt+1)+": "+getMessageWithCauses(e));
+            } catch (JedisConnectionException e) {
+                log.warn("Failed to perform Redis operation - attempt #" + (operationAttempt + 1) + ": " + getMessageWithCauses(e));
                 jedisPool.returnBrokenResource(jedis);
                 unrecoverable = e;
             } catch (Throwable e) {
-                log.error("Failed to perform Redis operation - attempt #"+(operationAttempt+1), e);
+                log.error("Failed to perform Redis operation - attempt #" + (operationAttempt + 1), e);
                 jedisPool.returnBrokenResource(jedis);
                 unrecoverable = e;
             }
         }
-        
-        throw new IllegalStateException("Failed to execute Redis operation after " + operationAttempts +" attempts", unrecoverable);
+
+        throw new IllegalStateException("Failed to execute Redis operation after " + operationAttempts + " attempts", unrecoverable);
     }
 
     public final void setConnectionAttempts(int connectionAttempts) {
@@ -100,7 +98,7 @@ public class RedisSessionManager extends GenericRedisSessionManager {
         }
 
         if (log.isTraceEnabled()) {
-            log.trace("Session sid="+id+" data size=" + (result == null ? "null" : result.length) +" loaded from redis");
+            log.trace("Session sid=" + id + " data size=" + (result == null ? "null" : result.length) + " loaded from redis");
         }
         return result;
     }
@@ -114,10 +112,10 @@ public class RedisSessionManager extends GenericRedisSessionManager {
             }
         });
         if (log.isTraceEnabled()) {
-            log.trace("Session sid="+id+" data size = " + data.length +" saved to Redis with TTL="+expireSeconds);
+            log.trace("Session sid=" + id + " data size = " + data.length + " saved to Redis with TTL=" + expireSeconds);
         }
     }
-    
+
     @Override
     protected void expire(final String id, final int expireSeconds) throws Exception {
         withJedis(new JedisOp<Long>() {
@@ -127,7 +125,7 @@ public class RedisSessionManager extends GenericRedisSessionManager {
             }
         });
         if (log.isTraceEnabled()) {
-            log.trace("Session sid="+id+" set Redis TTL="+expireSeconds);
+            log.trace("Session sid=" + id + " set Redis TTL=" + expireSeconds);
         }
     }
 
@@ -140,7 +138,7 @@ public class RedisSessionManager extends GenericRedisSessionManager {
             }
         });
         if (log.isTraceEnabled()) {
-            log.trace("Session sid="+id+" deleted from Redis");
+            log.trace("Session sid=" + id + " deleted from Redis");
         }
     }
 
@@ -158,7 +156,7 @@ public class RedisSessionManager extends GenericRedisSessionManager {
             }
         });
     }
-    
+
     private static String getMessageWithCauses(Throwable e) {
         StringBuilder sb = new StringBuilder();
         while (true) {
