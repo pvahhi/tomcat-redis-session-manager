@@ -222,26 +222,31 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
                 byte[] data = null;
                 try {
                     data = load(key);
-                } catch (Exception ex) {
+                } catch (Throwable ex) {
                     log.fatal("Failed to load session (id=" + key + ")", ex);
                 }
 
                 if (data != null) {
-
+                    NonStickySession nss = null;
                     try {
-                        NonStickySession nss = fromBinary(data);
-
-                        expire(key, nss.getMaxInactiveInterval());
-
-                        return new CachedSession(data, nss);
+                        nss = fromBinary(data);                       
                     } catch (Throwable e) {
                         log.warn("Failed to deserialize session id=" + key + ". Session data will be reset", e);
-                        try {
+                        try {                            
                             delete(key);
                         } catch (Exception ex) {
                             log.error("Failed to delete session (id=" + key + ")", ex);
                         }
+                        return null;
                     }
+                    
+                    try {
+                        expire(key, nss.getMaxInactiveInterval());
+                    } catch (Throwable ex) {
+                        log.error("Failed to set session (id=" + key + ") expiration", ex);
+                    }
+
+                    return new CachedSession(data, nss);
                 }
 
                 return null;
