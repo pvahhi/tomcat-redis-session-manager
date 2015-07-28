@@ -127,7 +127,9 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
     public void release(String key) {
         try (Lock lock = sessionLocks.lock(key)) {
             T item = items.get(key);
-            item.accessedBy.remove(Thread.currentThread().getId());
+            if (item != null) {
+                item.accessedBy.remove(Thread.currentThread().getId());
+            }
         }
     }
 
