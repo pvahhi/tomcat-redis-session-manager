@@ -43,7 +43,7 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
     }
 
     private final Map<String, T> items = new ConcurrentHashMap<>();
-    private final IdentityLock<String> sessionLocks = new IdentityLock<String>();
+    private final IdentityLock<String> itemLocks = new IdentityLock<String>();
 
     private final long duration;
     private final long evictionTimeout;
@@ -61,7 +61,7 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
                     T expirable = cs.getValue();
                     long itemDur = at - expirable.timestamp;
 
-                    try (Lock lock = sessionLocks.lock(key)) {
+                    try (Lock lock = itemLocks.lock(key)) {
                         if (expirable.accessedBy.size() == 0 && itemDur > duration) {
                             i.remove();
                         } else if (expirable.accessedBy.size() > 0 && (itemDur > 10 * duration)) {
@@ -80,7 +80,7 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
             }
 
         }
-    }, "SessionCache-eviction-thread");
+    }, "ExpirableCache-eviction-thread");
 
     public ExpirableCache(long duration, long evictionTimeout) {
         this.duration = duration;
@@ -89,7 +89,7 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
     }
 
     public T get(String key, ValueProvider<T> valueProvider) {
-        try (Lock lock = sessionLocks.lock(key)) {
+        try (Lock lock = itemLocks.lock(key)) {
 
             T result = items.get(key);
 
@@ -125,7 +125,7 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
      * @param key
      */
     public void release(String key) {
-        try (Lock lock = sessionLocks.lock(key)) {
+        try (Lock lock = itemLocks.lock(key)) {
             T item = items.get(key);
             if (item != null) {
                 item.accessedBy.remove(Thread.currentThread().getId());
@@ -134,7 +134,7 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
     }
 
     public void remove(String key) {
-        try (Lock lock = sessionLocks.lock(key)) {
+        try (Lock lock = itemLocks.lock(key)) {
             items.remove(key);
         }
     }
