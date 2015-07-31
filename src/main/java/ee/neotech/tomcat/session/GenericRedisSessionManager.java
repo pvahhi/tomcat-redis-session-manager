@@ -1,10 +1,14 @@
 package ee.neotech.tomcat.session;
 
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.jar.Manifest;
 
 import org.apache.catalina.LifecycleException;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
@@ -314,13 +318,29 @@ public abstract class GenericRedisSessionManager extends NonStickySessionManager
             this.sentinelSet = new LinkedHashSet<String>(asList);
         }
     }
+    
+    protected String getJarVersion() {
+        try {
+            for (Enumeration<URL> urls = this.getClass().getClassLoader().getResources("META-INF/MANIFEST.MF"); urls.hasMoreElements();) {
+                URL url = urls.nextElement();
+                Manifest manifest = new Manifest(url.openStream());
+                
+                if (Objects.equals(manifest.getMainAttributes().getValue("Implementation-Title"), "tomcat-redis-session-manager")) {
+                    return manifest.getMainAttributes().getValue("Implementation-Version");        
+                }                        
+            }
+        } catch (Exception e) {}
+        return "(version unknown)";
+    }
 
     @Override
     protected synchronized void startInternal() throws LifecycleException {
         long start = System.currentTimeMillis();
+               
+        log.info("Initializing Redis Session Manager "+getJarVersion());
+        log.info("Redis connection pool: maxTotal="+jedisPoolConfig.getMaxTotal()+", maxIdle="+jedisPoolConfig.getMaxIdle()+", minIdle="+jedisPoolConfig.getMinIdle());
+        log.info("Duration of sessions in cache is set to "+ this.keepSessionDuration + " seconds.");
         
-        log.info("Initializing Redis session manager with session cache duration "+ this.keepSessionDuration + " seconds.");
-        log.info("Redis connection pool config: maxTotal="+jedisPoolConfig.getMaxTotal()+", maxIdle="+jedisPoolConfig.getMaxIdle()+", minIdle="+jedisPoolConfig.getMinIdle());        
         super.startInternal();
 
         try {

@@ -77,13 +77,13 @@ public class NonStickySession extends StandardSession {
 
     @Override
     public void setCreationTime(long time) {
-        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by this fields)
+        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by these fields)
         this.creationTime = time;
     }
     
     @Override
     public void access() {
-        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by this fields)
+        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by these fields)
         
         if (ACTIVITY_CHECK) {
             accessCount.incrementAndGet();
@@ -92,7 +92,7 @@ public class NonStickySession extends StandardSession {
     
     @Override
     public void endAccess() {
-        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by this fields)
+        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by these fields)
         
         isNew = false;
 

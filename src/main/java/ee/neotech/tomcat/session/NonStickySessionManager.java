@@ -34,19 +34,19 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
 
     static class CachedSession extends Expirable {
         private byte[] binary;
-        private NonStickySession session;
-
-        public CachedSession() {}
+        private final NonStickySession session;
 
         public CachedSession(byte[] binary, NonStickySession session) {
+            if (session == null) {
+                throw new IllegalStateException("Attempt to put NULL session into cache");
+            }
             this.binary = binary;
             this.session = session;
         }
 
         @Override
         public String toString() {
-            return "CachedSession [ID=" + (session != null ? session.getId() : "null") + ", timestamp=" + timestamp + ", accessedBy="
-                    + getAccessedBy() + "]";
+            return "CachedSession [ID=" + session.getId() + ", timestamp=" + timestamp + ", accessedBy=" + getAccessedBy() + "]";
         }
     }
 
@@ -158,24 +158,29 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
     }
 
     @Override
-    public final void add(Session session) {
+    public final void add(final Session session) {
         try {
             String id = session.getId();
 
             CachedSession cachedSession = sessionCache.get(id, new ValueProvider<NonStickySessionManager.CachedSession>() {
                 @Override
                 public CachedSession get(String key) {
-                    return new CachedSession();
+                    return new CachedSession(null, (NonStickySession)session);
                 }
             });
 
             synchronized (cachedSession) {
+                if (cachedSession.session != session) {
+                    log.error("Cached session for id="+id+" is another instance with id="+cachedSession.session.getId());
+                }
+                
                 NonStickySession nss = (NonStickySession) session;
 
-                if (nss.isDirty()) {
+                if (nss.isDirty() || cachedSession.binary == null) {
                     boolean modified = nss.isModified();
                     
-                    // session modified/dirty states must be reset before serialization
+                    // Session modified/dirty states must be reset before serialization.
+                    // This is necessary since session state can be changed during serialization by other thread(s).
                     nss.resetStates();
 
                     byte[] binary = toBinary(nss);
@@ -183,13 +188,11 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
                     modified = modified || !Arrays.equals(cachedSession.binary, binary);
 
                     cachedSession.binary = binary;
-                    cachedSession.session = nss;
 
                     if (modified) {
                         save(id, binary, nss.getMaxInactiveInterval());
                     }
                 }
-
             }
 
         } catch (Exception ex) {

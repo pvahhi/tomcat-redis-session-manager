@@ -65,7 +65,7 @@ public class ExpirableCache<T extends ExpirableCache.Expirable> {
                         if (expirable.accessedBy.size() == 0 && itemDur > duration) {
                             i.remove();
                         } else if (expirable.accessedBy.size() > 0 && (itemDur > 10 * duration)) {
-                            log.error(expirable.toString() + " is stuck in expirable cache. Current duration: "
+                            log.warn(expirable.toString() + " is stuck in expirable cache. Current duration: "
                                     + TimeUnit.MILLISECONDS.toSeconds(itemDur) + "seconds.");
                         }
                     }
