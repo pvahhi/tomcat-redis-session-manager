@@ -1,13 +1,14 @@
 package ee.neotech.tomcat.session;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Objects;
 
 import org.apache.catalina.session.StandardSession;
 
 public class NonStickySession extends StandardSession {
     private static final long serialVersionUID = 7661325540126449709L;
-
-    //private final Log log = LogFactory.getLog(NonStickySession.class);
     
     /** true if session data was exposed and could be modified */
     private volatile boolean dirty;
@@ -74,56 +75,36 @@ public class NonStickySession extends StandardSession {
     public NonStickySessionManager getManager() {
         return (NonStickySessionManager)super.getManager();
     }
-
-    @Override
-    public void setCreationTime(long time) {
-        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by these fields)
-        this.creationTime = time;
-    }
-    
-    @Override
-    public void access() {
-        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by these fields)
-        
-        if (ACTIVITY_CHECK) {
-            accessCount.incrementAndGet();
-        }
-    }
     
     @Override
     public void endAccess() {
-        // do not modify lastAccessedTime and thisAccessedTime and keep them equal to 0 (this is done so serialized binary data is not affected by these fields)
-        
-        isNew = false;
-
-        if (ACTIVITY_CHECK) {
-            accessCount.decrementAndGet();
-        }
-
+        super.endAccess();
         getManager().endAccess(this);
     }
     
     @Override
-    public boolean isValid() {
-        if (!this.isValid) {
-            return false;
+    public void writeObjectData(ObjectOutputStream stream) throws IOException {
+        long lat = this.lastAccessedTime;
+        long tat = this.thisAccessedTime;
+        try {
+            // prevent serialization of constantly changing data
+            this.lastAccessedTime = 0;
+            this.thisAccessedTime = 0;
+            super.writeObjectData(stream);
+        } finally {
+            this.lastAccessedTime = lat;
+            this.thisAccessedTime = tat;
         }
-
-        if (this.expiring) {
-            return true;
-        }
-
-        if (ACTIVITY_CHECK && accessCount.get() > 0) {
-            return true;
-        }       
-        
-        // do not call expire. expiration is done with external mechanism
-
-        return this.isValid;
+    }
+    
+    @Override
+    public void readObjectData(ObjectInputStream stream) throws ClassNotFoundException, IOException { 
+        super.readObjectData(stream);
+        this.lastAccessedTime = this.thisAccessedTime = System.currentTimeMillis();
     }
 
-    public void resetStates() {
-        dirty = false;
-        modified = false;
+    @Override
+    public String toString() {
+        return "NonStickySession ["+(isValid?"V":"I") + (dirty?"D":"") + (modified?"M":"") + (expiring?"E":"") + (isNew?"N":"")+" "+id+"]";
     }
 }

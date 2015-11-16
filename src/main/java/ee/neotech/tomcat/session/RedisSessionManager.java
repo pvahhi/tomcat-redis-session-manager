@@ -97,8 +97,8 @@ public class RedisSessionManager extends GenericRedisSessionManager {
             return null;
         }
 
-        if (log.isTraceEnabled()) {
-            log.trace("Session sid=" + id + " data size=" + (result == null ? "null" : result.length) + " loaded from redis");
+        if (log.isDebugEnabled()) {
+            log.debug("Session sid=" + id + " data size=" + (result == null ? "null" : result.length) + " loaded from redis");
         }
         return result;
     }
@@ -111,8 +111,8 @@ public class RedisSessionManager extends GenericRedisSessionManager {
                 return jedis.setex(id.getBytes(), expireSeconds, data);
             }
         });
-        if (log.isTraceEnabled()) {
-            log.trace("Session sid=" + id + " data size = " + data.length + " saved to Redis with TTL=" + expireSeconds);
+        if (log.isDebugEnabled()) {
+            log.debug("Session sid=" + id + " data size = " + data.length + " saved to Redis with TTL=" + expireSeconds);
         }
     }
 
@@ -124,8 +124,8 @@ public class RedisSessionManager extends GenericRedisSessionManager {
                 return jedis.expire(id.getBytes(), expireSeconds);
             }
         });
-        if (log.isTraceEnabled()) {
-            log.trace("Session sid=" + id + " set Redis TTL=" + expireSeconds);
+        if (log.isDebugEnabled()) {
+            log.debug("Session sid=" + id + " set Redis TTL=" + expireSeconds);
         }
     }
 
@@ -137,8 +137,8 @@ public class RedisSessionManager extends GenericRedisSessionManager {
                 return jedis.del(id.getBytes());
             }
         });
-        if (log.isTraceEnabled()) {
-            log.trace("Session sid=" + id + " deleted from Redis");
+        if (log.isDebugEnabled()) {
+            log.debug("Session sid=" + id + " deleted from Redis");
         }
     }
 

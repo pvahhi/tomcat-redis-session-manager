@@ -319,27 +319,13 @@ public abstract class GenericRedisSessionManager extends NonStickySessionManager
         }
     }
     
-    protected String getJarVersion() {
-        try {
-            for (Enumeration<URL> urls = this.getClass().getClassLoader().getResources("META-INF/MANIFEST.MF"); urls.hasMoreElements();) {
-                URL url = urls.nextElement();
-                Manifest manifest = new Manifest(url.openStream());
-                
-                if (Objects.equals(manifest.getMainAttributes().getValue("Implementation-Title"), "tomcat-redis-session-manager")) {
-                    return manifest.getMainAttributes().getValue("Implementation-Version");        
-                }                        
-            }
-        } catch (Exception e) {}
-        return "(version unknown)";
-    }
+    
 
     @Override
     protected synchronized void startInternal() throws LifecycleException {
         long start = System.currentTimeMillis();
-               
-        log.info("Initializing Redis Session Manager "+getJarVersion());
+        
         log.info("Redis connection pool: maxTotal="+jedisPoolConfig.getMaxTotal()+", maxIdle="+jedisPoolConfig.getMaxIdle()+", minIdle="+jedisPoolConfig.getMinIdle());
-        log.info("Duration of sessions in cache is set to "+ this.keepSessionDuration + " seconds.");
         
         super.startInternal();
 
@@ -365,8 +351,6 @@ public abstract class GenericRedisSessionManager extends NonStickySessionManager
 
     @Override
     protected synchronized void stopInternal() throws LifecycleException {
-        log.info("Stopping Redis session manager");
-        
         super.stopInternal();
 
         try {

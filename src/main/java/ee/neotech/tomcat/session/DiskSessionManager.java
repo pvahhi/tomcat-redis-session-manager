@@ -7,34 +7,24 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class DiskSessionManager extends NonStickySessionManager {
 
-    private ConcurrentHashMap<String, Object> locks = new ConcurrentHashMap<String, Object>();
-
     protected String path;
-    
-    private Object getSessLock(String id) {
-        Object lock = new Object();
-        Object exlock = locks.putIfAbsent(id, lock);
-        return exlock == null ? lock : exlock;
-    }
 
     @Override
     protected byte[] load(String id) throws Exception {
-        synchronized (getSessLock(id)) {
-            File file = new File(path, id);
+        File file = new File(path, id);
 
-            if (file.exists()) {
-                try (FileInputStream is = new FileInputStream(file); ByteArrayOutputStream bos = new ByteArrayOutputStream();) {
-                    copyLarge(is, bos, new byte[1024]);
-                    return bos.toByteArray();
-                }
-            } else {
-                return null;
+        if (file.exists()) {
+            try (FileInputStream is = new FileInputStream(file); ByteArrayOutputStream bos = new ByteArrayOutputStream();) {
+                copyLarge(is, bos, new byte[1024]);
+                return bos.toByteArray();
             }
+        } else {
+            return null;
         }
+
     }
 
     private static long copyLarge(InputStream input, OutputStream output, byte[] buffer) throws IOException {
@@ -49,16 +39,14 @@ public class DiskSessionManager extends NonStickySessionManager {
 
     @Override
     protected void save(String id, byte[] data, int expireSeconds) throws Exception {
-        synchronized (getSessLock(id)) {
-            File file = new File(path, id);
-            
-            try (FileOutputStream fos = new FileOutputStream(file, false)) {
-                fos.write(data);
-                fos.flush();
-            }
+        File file = new File(path, id);
+
+        try (FileOutputStream fos = new FileOutputStream(file, false)) {
+            fos.write(data);
+            fos.flush();
         }
     }
-    
+
     @Override
     protected void expire(String id, int expireSeconds) throws Exception {
         // not implemented
@@ -66,10 +54,8 @@ public class DiskSessionManager extends NonStickySessionManager {
 
     @Override
     protected synchronized void delete(String id) throws Exception {
-        synchronized (getSessLock(id)) {
-            File file = new File(path, id);
-            file.delete();
-        }
+        File file = new File(path, id);
+        file.delete();
     }
 
     @Override
