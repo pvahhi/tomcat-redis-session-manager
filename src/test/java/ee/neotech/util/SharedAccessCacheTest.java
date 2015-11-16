@@ -156,32 +156,4 @@ public class SharedAccessCacheTest {
         }
     }
 
-    private volatile long a;
-
-    @Test
-    public void test2() throws InterruptedException {
-        List<Thread> all = new ArrayList<>();
-        for (int z = 0; z < 100; z++) {
-            Thread t = new Thread() {
-                public void run() {
-                    for (int i = 0; i < 10000; i++) {
-                       // synchronized (SharedAccessCacheTest.this) {
-                            ++a;
-                        //}
-                        //synchronized (SharedAccessCacheTest.this) {
-                            --a;
-                        //}
-                    }
-                };
-            };
-            all.add(t);
-            t.start();
-        }
-
-        for (Thread t : all) {
-            t.join();
-        }
-
-        System.out.println(a);
-    }
 }
