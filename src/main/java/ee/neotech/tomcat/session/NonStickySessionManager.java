@@ -87,7 +87,7 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
                     log.debug("Unloading session: "+nss);
                 }
                 
-                if (nss.isValid()) { // valid modified/new sessions are saved on unload
+                if (nss.isActualValid()) { // valid modified/new sessions are saved on unload
                     if (nss.isDirty() || cachedSession.binary == null) {
                         boolean modified = nss.isModified();
                         byte[] binary = toBinary(nss);

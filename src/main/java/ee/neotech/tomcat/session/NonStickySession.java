@@ -62,6 +62,14 @@ public class NonStickySession extends StandardSession {
             this.modified = true;
         }
     }
+    
+    /**
+     * Some implementations of {@link #isValidInternal} do not return isValid immediately.
+     * @return isValid field value 
+     */
+    public final boolean isActualValid() {
+        return isValid;
+    }
 
     public final boolean isDirty() {
         return dirty;

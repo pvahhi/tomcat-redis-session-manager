@@ -1,14 +1,10 @@
 package ee.neotech.tomcat.session;
 
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.jar.Manifest;
 
 import org.apache.catalina.LifecycleException;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
