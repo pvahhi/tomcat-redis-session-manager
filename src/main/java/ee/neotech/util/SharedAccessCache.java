@@ -54,7 +54,7 @@ public abstract class SharedAccessCache<K,T> {
             } else {
                 long age = System.currentTimeMillis() - cacheItem.timestamp;
                 if (age > CRITICAL_AGE) {
-                    log.error("Critical age ("+age+"ms) for cache item "+cacheItem.data+" is reached. Accessed by threads: "+cacheItem.accessedBy);
+                    log.warn("Critical age ("+age+"ms) for cache item "+cacheItem.data+" is reached. Accessed by threads: "+cacheItem.accessedBy);
                 }
             }
             

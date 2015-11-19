@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ee.neotech</groupId>
     <artifactId>tomcat-redis-session-manager</artifactId>
-    <version>1.031</version>
+    <version>1.032</version>
     <description>Tomcat non-sticky session manager. Disk and Redis implementations</description>
     <packaging>jar</packaging>
     <properties>
@@ -64,7 +64,7 @@
         <dependency>
             <groupId>org.apache.tomcat</groupId>
             <artifactId>tomcat-catalina</artifactId>
-            <version>7.0.47</version>
+            <version>7.0.26</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

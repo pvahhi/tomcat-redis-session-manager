@@ -62,18 +62,22 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
                     return null;
                 }
 
-                if (updateExpireOnAccess) {
-                    try {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Updating session id="+key+" expiration. Will expire in "+nss.getMaxInactiveInterval()+" seconds");
+                if (nss.isActualValid()) {
+                    if (updateExpireOnAccess) {
+                        try {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Updating session id="+key+" expiration. Will expire in "+nss.getMaxInactiveInterval()+" seconds");
+                            }
+                            NonStickySessionManager.this.expire(key, nss.getMaxInactiveInterval());
+                        } catch (Throwable ex) {
+                            log.error("Failed to set session (id=" + key + ") expiration", ex);
                         }
-                        NonStickySessionManager.this.expire(key, nss.getMaxInactiveInterval());
-                    } catch (Throwable ex) {
-                        log.error("Failed to set session (id=" + key + ") expiration", ex);
                     }
+                    
+                    return new CachedSession(data, nss);
+                } else {
+                    log.warn("Invalid session is loaded: " + nss + ". Discarding, invalid sessions must not be saved.");
                 }
-
-                return new CachedSession(data, nss);
             }
 
             return null;
