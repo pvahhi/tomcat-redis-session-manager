@@ -11,27 +11,24 @@ import java.util.Enumeration;
 import java.util.Objects;
 import java.util.jar.Manifest;
 
-import org.apache.catalina.Lifecycle;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.LifecycleListener;
 import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Session;
 import org.apache.catalina.session.ManagerBase;
 import org.apache.catalina.util.CustomObjectInputStream;
-import org.apache.catalina.util.LifecycleSupport;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
 import ee.neotech.util.SharedAccessCache;
 
-public abstract class NonStickySessionManager extends ManagerBase implements Lifecycle {
+public abstract class NonStickySessionManager extends ManagerBase {
 
     private final Log log = LogFactory.getLog(NonStickySessionManager.class);
 
     /**
      * The lifecycle event support for this component.
      */
-    protected LifecycleSupport lifecycle = new LifecycleSupport(this);
     private ClassLoader loader;
 
     class SessionCache extends SharedAccessCache<String, CachedSession> {
@@ -170,7 +167,7 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
      */
     @Override
     public void addLifecycleListener(LifecycleListener listener) {
-        lifecycle.addLifecycleListener(listener);
+        super.addLifecycleListener(listener);
     }
 
     /**
@@ -178,7 +175,7 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
      */
     @Override
     public LifecycleListener[] findLifecycleListeners() {
-        return lifecycle.findLifecycleListeners();
+        return super.findLifecycleListeners();
     }
 
     /**
@@ -186,7 +183,7 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
      */
     @Override
     public void removeLifecycleListener(LifecycleListener listener) {
-        lifecycle.removeLifecycleListener(listener);
+        super.removeLifecycleListener(listener);
     }
     
     protected String getJarVersion() {
@@ -214,8 +211,7 @@ public abstract class NonStickySessionManager extends ManagerBase implements Lif
     protected synchronized void startInternal() throws LifecycleException {
         super.startInternal();
 
-        setDistributable(true);
-        loader = getContainer() != null ? getContainer().getLoader().getClassLoader() : null;
+        loader = getContext().getLoader().getClassLoader();
         sessionCache = new SessionCache();
 
         setState(LifecycleState.STARTING);

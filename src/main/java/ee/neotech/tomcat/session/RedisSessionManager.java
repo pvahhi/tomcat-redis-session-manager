@@ -54,17 +54,15 @@ public class RedisSessionManager extends GenericRedisSessionManager {
             }
 
             try {
-                T result = operation.execute(jedis);
-                jedisPool.returnResource(jedis);
-                return result;
+                return operation.execute(jedis);
             } catch (JedisConnectionException e) {
                 log.warn("Failed to perform Redis operation - attempt #" + (operationAttempt + 1) + ": " + getMessageWithCauses(e));
-                jedisPool.returnBrokenResource(jedis);
                 unrecoverable = e;
             } catch (Throwable e) {
                 log.error("Failed to perform Redis operation - attempt #" + (operationAttempt + 1), e);
-                jedisPool.returnBrokenResource(jedis);
                 unrecoverable = e;
+            } finally {
+                jedis.close();
             }
         }
 
